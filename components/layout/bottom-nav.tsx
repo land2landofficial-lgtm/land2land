@@ -1,0 +1,109 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Search, Heart, Plus, Home, User } from "lucide-react"
+
+interface CurrentUser {
+  id: string
+  email: string
+  username: string
+  user_type: "customer" | "associate" | "admin"
+}
+
+export default function BottomNav() {
+  const pathname = usePathname()
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [isBuilder, setIsBuilder] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { 
+          credentials: "include",
+          cache: "no-store",
+        })
+        if (response.ok) {
+          const data = await response.json()
+          // API returns user: null for unauthenticated users
+          if (data.user) {
+            setCurrentUser(data.user)
+            setIsBuilder(data.user.user_type === "associate" || data.user.user_type === "admin")
+          }
+        }
+      } catch {
+        // Network error - user not logged in
+      }
+    }
+
+    // Defer auth check to not block LCP
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(checkAuth, { timeout: 3000 })
+    } else {
+      setTimeout(checkAuth, 500)
+    }
+  }, [])
+
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/")
+
+  // Hide bottom nav on dashboard/admin pages
+  if (
+    pathname?.includes("/buyer") ||
+    pathname?.includes("/builder") ||
+    pathname?.includes("/dashboard") ||
+    pathname?.includes("/admin") ||
+    pathname?.includes("/associate")
+  ) {
+    return null
+  }
+
+  const dashboardLink = isBuilder ? "/builder" : "/buyer"
+
+  return (
+    <>
+      {/* Spacer for fixed nav (includes iOS/Android safe-area inset) */}
+      <div
+        className="md:hidden"
+        style={{ height: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}
+      />
+
+      <nav aria-label="Bottom navigation" className="bottom-nav-container">
+        <div className="bottom-nav">
+          <Link href="/properties" className={`bottom-nav-item ${isActive("/properties") ? "active" : ""}`}>
+            <Search size={20} />
+            <span>Search</span>
+          </Link>
+
+          <Link href="/favorites" className={`bottom-nav-item ${isActive("/favorites") ? "active" : ""}`}>
+            <Heart size={20} />
+            <span>Saved</span>
+          </Link>
+
+          {/* Floating Action Button for Add Property - Always visible */}
+          <Link 
+            href={isBuilder ? "/associate/properties/new" : "/auth/login?redirect=/associate/properties/new"} 
+            className="fab" 
+            aria-label="Add property" 
+            title="Add Property"
+          >
+            <Plus size={24} />
+          </Link>
+
+          <Link href="/" className={`bottom-nav-item ${pathname === "/" ? "active" : ""}`}>
+            <Home size={20} />
+            <span>Home</span>
+          </Link>
+
+          <Link
+            href={currentUser ? dashboardLink : "/auth/login"}
+            className={`bottom-nav-item ${isActive("/buyer") || isActive("/builder") ? "active" : ""}`}
+          >
+            <User size={20} />
+            <span>Profile</span>
+          </Link>
+        </div>
+      </nav>
+    </>
+  )
+}

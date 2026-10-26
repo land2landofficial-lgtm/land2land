@@ -1,0 +1,407 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { Menu, X, LogOut, User, ChevronDown, Map, TrendingUp, Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import HeaderSearch from "./header-search"
+import { LAND_TYPE_LIST } from "@/lib/land-types-content"
+
+interface CurrentUser {
+  id: string
+  email: string
+  username: string
+  user_type: "customer" | "associate" | "admin"
+}
+
+const landTypes = LAND_TYPE_LIST.map((t) => ({ name: t.label, href: `/land/${t.slug}` }))
+
+export default function MegaMenuHeader() {
+  const [mounted, setMounted] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [headerHidden, setHeaderHidden] = useState(false)
+  const [headerScrolled, setHeaderScrolled] = useState(false)
+
+  // Auto-hide header on scroll down, reveal on scroll up
+  useEffect(() => {
+    let lastScrollY = window.scrollY
+    let ticking = false
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY
+          const delta = currentScrollY - lastScrollY
+
+          setHeaderScrolled(currentScrollY > 10)
+
+          // Only hide after scrolling down 50px to avoid flickering on small swipes
+          if (currentScrollY > 10) {
+            if (delta > 6) {
+              // Scrolling down — hide header to reclaim screen space
+              setHeaderHidden(true)
+              // Always close mobile menu when header hides
+              setMobileMenuOpen(false)
+            } else if (delta < -4) {
+              // Scrolling up — reveal header
+              setHeaderHidden(false)
+            }
+          } else {
+            // At the very top — always show
+            setHeaderHidden(false)
+          }
+
+          lastScrollY = currentScrollY
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
+
+    // Defer auth check to not block initial render
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { 
+          credentials: "include",
+          // IMPORTANT: Never cache auth responses - each user must get their own session
+          cache: "no-store",
+        })
+        if (response.ok) {
+          const data = await response.json()
+          // API returns user: null for unauthenticated users
+          if (data.user) {
+            setCurrentUser(data.user)
+          }
+        }
+      } catch {
+        // Network error - user not logged in
+      }
+    }
+
+    // Use requestIdleCallback to not block main thread
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(checkAuth)
+    } else {
+      setTimeout(checkAuth, 100)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+    setCurrentUser(null)
+    window.location.href = "/"
+  }
+
+  const getDashboardLink = () => {
+    if (!currentUser) return "/dashboard"
+    if (currentUser.user_type === "associate") return "/associate/dashboard"
+    if (currentUser.user_type === "admin") return "/admin/dashboard"
+    return "/buyer"
+  }
+
+  const getDashboardLabel = () => {
+    if (!currentUser) return "My Dashboard"
+    if (currentUser.user_type === "associate") return "Associate Dashboard"
+    if (currentUser.user_type === "admin") return "Admin Dashboard"
+    return "Buyer Dashboard"
+  }
+
+  return (
+    <>
+      {/* 1. FIXED HEADER: Removed from document flow to prevent Flexbox squishing */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 w-full bg-white border-b border-gray-200 flex-none header-scroll-aware${headerHidden ? " header-hidden" : ""}${headerScrolled ? " header-scrolled" : ""}`}
+        style={{ height: "64px" }}
+      >
+        <nav aria-label="Main navigation" className="flex items-center justify-between px-4 md:px-6 w-full h-full overflow-hidden">
+          {/* Logo Container - Hardlocked with inline minWidth/minHeight to prevent WebView squishing */}
+          <Link href="/" className="flex items-center shrink-0" aria-label="Land2Land home">
+            <Image
+              src="/images/logo.png"
+              alt="Land2Land Logo"
+              width={200}
+              height={40}
+              priority
+              className="shrink-0 object-contain object-left w-[150px] md:w-[200px]"
+              style={{ minWidth: "150px", minHeight: "40px" }}
+            />
+          </Link>
+
+          {/* Desktop Mega Menu Navigation */}
+          <div className="hidden lg:flex items-center gap-1">
+            <Link
+              href="/"
+              className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors"
+            >
+              Home
+            </Link>
+
+            <Link
+              href="/properties"
+              className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors"
+            >
+              Buy
+            </Link>
+
+            <Link
+              href="/sell"
+              className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors"
+            >
+              Sell
+            </Link>
+
+            <Link
+              href="/find-associate"
+              className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors"
+            >
+              Find Associate
+            </Link>
+
+            {/* Land Types Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors flex items-center gap-1 whitespace-nowrap">
+                  <Map className="h-4 w-4" />
+                  Land Types
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {landTypes.map((type) => (
+                  <DropdownMenuItem key={type.name} asChild>
+                    <Link href={type.href} className="w-full">
+                      {type.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Link
+              href="/investments"
+              className="px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] transition-colors flex items-center gap-1 whitespace-nowrap"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Investments
+            </Link>
+          </div>
+
+          {/* Desktop Search */}
+          <div className="hidden lg:block relative flex-1 max-w-md mx-4">
+            <HeaderSearch />
+          </div>
+
+          {/* Desktop Auth - Locked minimum width so it doesn't shift other elements when it loads */}
+          <div className="hidden lg:flex items-center gap-2 shrink-0 justify-end" style={{ minWidth: "150px" }}>
+            {mounted ? (
+              currentUser ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-sm h-9 border-[#125007] text-[#125007] bg-transparent flex-none"
+                    >
+                      <User size={16} className="mr-2" />
+                      {currentUser.username}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={getDashboardLink()}>{getDashboardLabel()}</Link>
+                    </DropdownMenuItem>
+                    {currentUser.user_type === "admin" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/dashboard">Admin Settings</Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut size={16} className="mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="text-sm h-9 border-[#125007] text-[#125007] bg-transparent hover:bg-[#125007]/5 flex-none"
+                  >
+                    <Link href="/auth/login">List Land</Link>
+                  </Button>
+                  <Button asChild size="sm" className="text-sm h-9 bg-[#125007] hover:bg-[#1d3610] flex-none">
+                    <Link href="/auth/register">Sign Up</Link>
+                  </Button>
+                </>
+              )
+            ) : null}
+          </div>
+
+          {/* Mobile App-Bar Actions - Hardlocked container width and SVG constraints */}
+          <div 
+            className="lg:hidden flex items-center gap-1 shrink-0 justify-end" 
+            style={{ minWidth: "120px" }}
+          >
+            <Link
+              href="/properties"
+              className="app-bar-action p-2 text-gray-700 hover:text-[#125007] transition-colors rounded-full shrink-0"
+              aria-label="Search properties"
+            >
+              <Search size={22} className="shrink-0" style={{ minWidth: "22px", minHeight: "22px" }} />
+            </Link>
+
+            <Link
+              href={currentUser ? getDashboardLink() : "/auth/login"}
+              className="app-bar-action p-2 text-gray-700 hover:text-[#125007] transition-colors rounded-full shrink-0"
+              aria-label={currentUser ? "My account" : "Sign in"}
+            >
+              <User size={22} className="shrink-0" style={{ minWidth: "22px", minHeight: "22px" }} />
+            </Link>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="app-bar-action p-2 text-gray-700 hover:text-[#125007] transition-colors rounded-full shrink-0"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              {mobileMenuOpen ? (
+                <X size={22} className="shrink-0" style={{ minWidth: "22px", minHeight: "22px" }} />
+              ) : (
+                <Menu size={22} className="shrink-0" style={{ minWidth: "22px", minHeight: "22px" }} />
+              )}
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* 2. INVISIBLE SPACER: Prevents the page content from hiding under the fixed header */}
+      <div className="w-full flex-none block" style={{ height: "64px" }} aria-hidden="true" />
+
+      {/* Mobile Navigation */}
+      {mobileMenuOpen && (
+        <nav
+          id="mobile-navigation"
+          aria-label="Mobile navigation"
+          className="lg:hidden border-t border-gray-200 bg-white fixed left-0 right-0 bottom-0 z-40 overflow-y-auto"
+          style={{ top: "64px" }} // Perfectly aligns just beneath the 64px fixed header
+        >
+          <div className="flex flex-col gap-1 px-4 py-3">
+            {/* Mobile Search Bar */}
+            <div className="mb-3">
+              <HeaderSearch />
+            </div>
+
+            <Link
+              href="/"
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+            >
+              Home
+            </Link>
+
+            <Link
+              href="/properties"
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+            >
+              Buy
+            </Link>
+
+            <Link
+              href="/sell"
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+            >
+              Sell
+            </Link>
+
+            <Link
+              href="/find-associate"
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+            >
+              Find Associate
+            </Link>
+
+            <div className="border-t border-gray-100 my-2" />
+            <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Land Types</p>
+            {landTypes.map((type) => (
+              <Link
+                key={type.name}
+                href={type.href}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+              >
+                {type.name}
+              </Link>
+            ))}
+
+            <Link
+              href="/investments"
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#125007] hover:bg-gray-50 rounded transition-colors"
+            >
+              Investments
+            </Link>
+
+            <div className="border-t border-gray-100 my-2" />
+            {mounted && (
+              <div className="flex gap-2 mt-3">
+                {currentUser ? (
+                  <>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-9 flex-1 border-[#125007] text-[#125007] bg-transparent"
+                    >
+                      <Link href={getDashboardLink()}>{getDashboardLabel()}</Link>
+                    </Button>
+                    <Button
+                      onClick={handleLogout}
+                      size="sm"
+                      className="text-xs h-9 flex-1 bg-[#125007] hover:bg-[#1d3610]"
+                    >
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-9 flex-1 border-[#125007] text-[#125007] bg-transparent"
+                    >
+                      <Link href="/auth/login">List Land</Link>
+                    </Button>
+                    <Button asChild size="sm" className="text-xs h-9 flex-1 bg-[#125007] hover:bg-[#1d3610]">
+                      <Link href="/auth/register">Sign Up</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </nav>
+      )}
+    </>
+  )
+}

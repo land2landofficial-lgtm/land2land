@@ -1,0 +1,34 @@
+import type { Metadata } from "next"
+import RegisterForm from "@/components/forms/register-form"
+import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "Create Account | Land2Land",
+  description: "Join Land2Land to buy, sell, or invest in land properties. Create your account to get started.",
+}
+
+export default function RegisterPage() {
+  return (
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 median-auth-page">
+        <div className="w-full max-w-sm">
+          <div className="space-y-6">
+            <div className="space-y-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
+              <p className="text-sm text-muted-foreground">Join Land2Land marketplace</p>
+            </div>
+
+            <RegisterForm />
+
+            <div className="text-center text-sm">
+              <p className="text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/auth/login" className="text-primary hover:underline font-medium">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+    </main>
+  )
+}

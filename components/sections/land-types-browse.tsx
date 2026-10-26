@@ -1,0 +1,151 @@
+import Image from "next/image"
+import Link from "next/link"
+import { ArrowRight } from "lucide-react"
+
+const landTypes = [
+  {
+    name: "Agricultural Land",
+    description: "Fertile cropland, irrigated fields & arable parcels",
+    listings: "45,000+",
+    image: "/land-types/agricultural.png",
+    href: "/land/agricultural",
+    badge: "Most Popular",
+    badgeColor: "bg-amber-500",
+    microLinks: [["Fertile Farmland", "/land/agricultural"], ["Farmhouses", "/land/farmland"], ["Solar Land", "/land/industrial"]],
+  },
+  {
+    name: "Residential Land",
+    description: "Approved layouts, NA land & township schemes",
+    listings: "32,000+",
+    image: "/land-types/residential.png",
+    href: "/land/residential-plot",
+    badge: "High Demand",
+    badgeColor: "bg-primary",
+    microLinks: [["Gated Layouts", "/land/residential-plot"], ["NA Plots", "/land/vacant"], ["Villa Plots", "/land/residential-plot"]],
+  },
+  {
+    name: "Commercial Land",
+    description: "Highway-facing land, market & retail parcels",
+    listings: "8,500+",
+    image: "/land-types/commercial.png",
+    href: "/land/commercial-plot",
+    badge: null,
+    badgeColor: "",
+  },
+  {
+    name: "Industrial Land",
+    description: "MIDC notified zones, warehousing & factory plots",
+    listings: "4,200+",
+    image: "/land-types/industrial.png",
+    href: "/land/industrial",
+    badge: null,
+    badgeColor: "",
+  },
+  {
+    name: "Farmland",
+    description: "Managed farms, orchards, plantations & agri estates",
+    listings: "12,800+",
+    image: "/land-types/farmland.png",
+    href: "/land/farmland",
+    badge: null,
+    badgeColor: "",
+  },
+  {
+    name: "Vacant Land",
+    description: "Non-agricultural converted land ready for construction",
+    listings: "18,400+",
+    image: "/land-types/na-plot.png",
+    href: "/land/vacant",
+    badge: null,
+    badgeColor: "",
+  },
+  {
+    name: "Abadi Land",
+    description: "Inhabited village settlement land with residential rights",
+    listings: "6,200+",
+    image: "/land-types/abadi.png",
+    href: "/land/abadi-land",
+    badge: "New",
+    badgeColor: "bg-amber-500",
+  },
+]
+
+export default function LandTypesBrowse() {
+  return (
+    <section className="w-full py-12 md:py-16 px-3 md:px-4 bg-gradient-to-b from-[var(--background)] to-[#f4f9ef] border-t border-[var(--land-border)]">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-8 md:mb-10">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--land-sage)] mb-2">Browse by Category</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-[var(--land-earth)] text-balance">
+              Find Every Type of Land & Property<br className="hidden sm:block" /> In One Trusted Marketplace
+            </h2>
+          </div>
+          <Link
+            href="/buy"
+            className="hidden md:flex items-center gap-1.5 text-sm font-medium text-[var(--land-sage)] hover:text-[var(--land-primary)] transition-colors shrink-0"
+          >
+            View all <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* Bento grid layout */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          {landTypes.map((type, index) => (
+            <div
+              key={type.name}
+              href={type.href}
+              className={`group relative overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300  col-span-2 md:col-span-1 row-span-1 h-52 md:h-52`}
+            >
+              {/* Photo */}
+              <Link href={type.href} className="absolute inset-0 z-0" aria-label={`Explore ${type.name}`} />
+              <Image
+                src={type.image}
+                alt={type.name}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 768px) 50vw, 33vw"
+              />
+
+              {/* Dark overlay — heavier at bottom for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/5 group-hover:from-black/85 transition-all duration-300" />
+
+              {/* Badge */}
+              {type.badge && (
+                <div className={`absolute top-3 left-3 ${type.badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full`}>
+                  {type.badge}
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <p className="text-[10px] font-semibold text-white/70 uppercase tracking-wider mb-0.5">
+                  {type.listings} listings
+                </p>
+                <h3 className="text-sm md:text-base font-bold text-white leading-tight mb-0.5">
+                  {type.name}
+                </h3>
+                <p className="text-[11px] text-white/75 leading-tight line-clamp-1 hidden md:block">
+                  {type.description}
+                </p>
+                <div className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-white/80 group-hover:text-white transition-colors">Explore <ArrowRight size={10} /></div>
+                {type.microLinks && <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-white/80">{type.microLinks.map(([label, href]) => <Link key={label} href={href} className="underline decoration-white/40 underline-offset-2 hover:text-white">{label}</Link>)}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile "View all" */}
+        <div className="flex justify-center pt-6 md:hidden">
+          <Link
+            href="/buy"
+            className="flex items-center gap-1.5 text-sm font-medium text-[var(--land-primary)] border border-[var(--land-primary)]/40 px-5 py-2 rounded-full hover:bg-[var(--muted)] transition-colors"
+          >
+            View all land types <ArrowRight size={14} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
